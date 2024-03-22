@@ -2,30 +2,43 @@ import time
 
 class Template:
     def __init__(self) -> None:
-        self._name = input("Template name: ")
-        if not self.isValidName(self._name):
-            raise ValueError("Invalid template name. Please use alphanumeric characters.")
+        try:
+            self._name = input("Template name: ")
+            if not self.isValidName(self._name):
+                raise ValueError("Invalid template name. Please use alphanumeric characters.")
 
-        self._workTime = self.getValidTime("Work length in minutes: ")
-        self._breakTime = self.getValidTime("Break length in minutes: ")
+            self._workTime = self.getValidTime("Work length in minutes: ")
+            self._breakTime = self.getValidTime("Break length in minutes: ")
+        except ValueError as e:
+            print(e)
+            raise
 
     def editWorkTime(self) -> None:
-        new_time = self.getValidTime(f"Current work length: {self._workTime} minutes. Enter the new time: ")
-        self._workTime = new_time
-        print(f"Work time is now {self._workTime} minutes.")
+        try:
+            new_time = self.getValidTime(f"Current work length: {self._workTime} minutes. Enter the new time: ")
+            self._workTime = new_time
+            print(f"Work time is now {self._workTime} minutes.")
+        except ValueError as e:
+            print(e)
 
     def editBreakTime(self) -> None:
-        new_time = self.getValidTime(f"Current break length: {self._breakTime} minutes. Enter the new time: ")
-        self._breakTime = new_time
-        print(f"Break time is now {self._breakTime} minutes.")
+        try:
+            new_time = self.getValidTime(f"Current break length: {self._breakTime} minutes. Enter the new time: ")
+            self._breakTime = new_time
+            print(f"Break time is now {self._breakTime} minutes.")
+        except ValueError as e:
+            print(e)
 
     def editTemplateName(self) -> None:
-        new_name = input(f"Change name of {self._name} to: ")
-        if self.isValidName(new_name):
-            print(f"Template name changed from {self._name} to {new_name}!")
-            self._name = new_name
-        else:
-            raise ValueError("Invalid template name. Please use alphanumeric characters.")
+        try:
+            new_name = input(f"Change name of {self._name} to: ")
+            if self.isValidName(new_name):
+                print(f"Template name changed from {self._name} to {new_name}!")
+                self._name = new_name
+            else:
+                raise ValueError("Invalid template name. Please use alphanumeric characters.")
+        except ValueError as e:
+            print(e)
 
     def isValidTime(self, time: str) -> bool:
         try:
@@ -39,107 +52,136 @@ class Template:
 
     def getValidTime(self, prompt: str) -> int:
         while True:
-            time_input = input(prompt)
-            if self.isValidTime(time_input):
-                return int(time_input)
-            print("Invalid time. Please enter a value between 1 and 120 minutes.")
+            try:
+                time_input = input(prompt)
+                if self.isValidTime(time_input):
+                    return int(time_input)
+                print("Invalid time. Please enter a value between 1 and 120 minutes.")
+            except ValueError:
+                print("Invalid input. Please enter a valid integer.")
 
 class Timer:
     def __init__(self, duration: int) -> None:
-        self._duration = int(duration)
-        self._remainingDuration = self._duration
-        self._paused = True
-        
+        try:
+            self._duration = int(duration) # * 60 INGORE! Will be uncommented once testing is complete
+            self._remainingDuration = self._duration
+            self._paused = True
+        except ValueError:
+            raise ValueError("Invalid duration. Please enter a valid integer for the timer duration.")
+
     def startTimer(self) -> None:
-        self.resumeTimer()
-        while self._remainingDuration > 0:
-            if not self._paused:
-                time.sleep(1)
-                self._remainingDuration -= 1
-        print("\nTimer has ended!")
-        
+        try:
+            self.resumeTimer()
+            while self._remainingDuration >= 0:
+                if not self._paused:
+                    mins, secs = divmod(self._remainingDuration, 60)
+                    time_format = '{:02d}:{:02d}'.format(mins, secs)
+                    print(f"Time remaining: {time_format}" + "\r", end="")
+                    time.sleep(1)
+                    self._remainingDuration -= 1
+            print("\nTimer has ended!")
+        except ValueError:
+            raise ValueError("Invalid duration. Please enter a valid integer for the timer duration.")
+
     def hasEnded(self) -> bool:
-        if self._remainingDuration == 0:
-            return True
-        else:
-            return False
-        
+        return self._remainingDuration <= 0
+
     def endTimer(self) -> None:
         self._remainingDuration = 0
-        
+
     def resetTimer(self) -> None:
         self._remainingDuration = self._duration
-        
+
     def pauseTimer(self) -> None:
         self._paused = True
-        
+
     def resumeTimer(self) -> None:
         self._paused = False
-    
-    
+
 class Session:
-    def __init__(self, template:Template) -> None:
-        # Set ammount of work sessions for this session, each work session except the last one will be followed by a break
-        length = input("Work sessions: ")
-        # Initialize two timers, one for work and one for break
-        self._workTimer = Timer(template._workTime) 
-        self._breakTimer = Timer(template._breakTime)
-        # Set the current timer to workTimer, as the session will start with a bout of work
-        self._currentTimer = self._workTimer
-        self._length = int(length)
-        self._remainingLength = self._length
-        self.startNextTimer()
-            
-            
-    def startNextTimer(self) -> None:
-        if not self._remainingLength == 0:
-            self._remainingLength -= 1
-        else: 
+    def __init__(self, template: Template) -> None:
+        try:
+            length = self.getValidInput("Work sessions: ")
+            self._workTimer = Timer(template._workTime)
+            self._breakTimer = Timer(template._breakTime)
+            self._currentTimer = self._workTimer
+            self._length = int(length)
+            self._remainingLength = self._length
+            self.startNextTimer()
+        except ValueError as e:
+            print(e)
+            raise
+
+    def startNextTimer(self):
+        if self._remainingLength == 0:
             print("Session has ended!")
             return
         self._currentTimer.startTimer()
-        while not self._currentTimer.hasEnded(): 
-            mins, secs = divmod(self._currentTimer._remainingDuration, 60)
-            print(f"{mins:02}:{secs:02}", end="\r")
+        while not self._currentTimer.hasEnded():
+            time.sleep(1)
+        print(f"Session {self._length - self._remainingLength + 1} of {self._length} completed!")
+        self._remainingLength -= 1
+        self._currentTimer.resetTimer()
         self.switchCurrentTimer()
         self.startNextTimer()
-        
+
     def switchCurrentTimer(self):
         self._currentTimer = self._workTimer if self._currentTimer == self._breakTimer else self._breakTimer
 
     def skipTimer(self) -> None:
-        self._currentTimer.endTimer()
-        self.startNextTimer()
-        print("Timer has been skipped!")
-        
+        try:
+            self._currentTimer.endTimer()
+            self.startNextTimer()
+            print("Timer has been skipped!")
+        except ValueError as e:
+            print(e)
+
     def rewindTimer(self) -> None:
-        if self._remainingLength < self._length:
-            self._currentTimer.resetTimer()
-            self._currentTimer.pauseTimer()
-            print("Timer has been rewinded!")
-        else:
-            print("Cannot rewind timer!")
+        try:
+            if self._remainingLength < self._length:
+                self._currentTimer.resetTimer()
+                self._currentTimer.pauseTimer()
+                print("Timer has been rewound!")
+            else:
+                raise ValueError("Cannot rewind timer!")
+        except ValueError as e:
+            print(e)
 
     def pauseResumeTimer(self) -> None:
-        if self._currentTimer._paused:
-            self._currentTimer.resumeTimer()
-            print("Timer resumed!")
-        else:
-            self._currentTimer.pauseTimer()
-            print("Timer paused!")
-        
-        
+        try:
+            if self._currentTimer._paused:
+                self._currentTimer.resumeTimer()
+                print("Timer resumed!")
+            else:
+                self._currentTimer.pauseTimer()
+                print("Timer paused!")
+        except AttributeError:
+            print("Timer has not started yet. Please start the timer first.")
+
+    def getValidInput(self, prompt: str, min_value: int = 1, max_value: int = 10) -> int:
+        while True:
+            try:
+                input_value = int(input(prompt))
+                if min_value <= input_value <= max_value:
+                    return input_value
+                else:
+                    print(f"Invalid input. Please enter a value between {min_value} and {max_value}.")
+            except ValueError:
+                print("Invalid input. Please enter a valid integer.")
 
             
 if __name__ == "__main__":
     template = Template()
     session = Session(template)
+    time.sleep(3)
+    session.pauseResumeTimer()
+    time.sleep(5)
+    session.pauseResumeTimer()
     
     
 
 
 # toDo:
-# - fix timer not showing 
 # - try: except: clauses for better error management 
 # - implement a callback function or event handling 
 #   mechanism to notify external code when the timer ends
