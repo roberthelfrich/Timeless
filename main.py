@@ -6,8 +6,14 @@ from template import Template
 from session import Session
 from gui import GUI
 
+import os
+os.environ['TK_SILENCE_DEPRECATION'] = '1'
+
+def applicationSupportsSecureRestorableState() -> bool:
+    return True
+
 if __name__ == "__main__":
-    gui = GUI()
+    # gui = GUI()
     template = Template()
     session = Session(template)
     timerThread = threading.Thread(target=session.startNextTimer)
